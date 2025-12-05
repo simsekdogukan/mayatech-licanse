@@ -14,8 +14,88 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f5f5f5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Lock Screen */
+        #lockScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        .lock-title {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 50px;
+            text-align: center;
+        }
+
+        .pattern-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .dot {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dot.active {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: white;
+        }
+
+        .dot:hover {
+            border-color: white;
+        }
+
+        .error-msg {
+            color: #ff6b6b;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin-top: 30px;
+            display: none;
+        }
+
+        .error-msg.show {
+            display: block;
+        }
+
+        /* Main Content */
+        #mainContent {
+            display: none;
             padding: 40px 20px;
+            width: 100%;
+        }
+
+        #mainContent.unlocked {
+            display: block;
+        }
+
+        body.unlocked {
+            background: #f5f5f5;
         }
 
         .container {
@@ -111,14 +191,142 @@
 </head>
 
 <body>
-    <div class="container">
-        <h1>Files</h1>
-        <div class="file-list" id="fileList">
-            <div class="loading">Loading...</div>
+    <!-- Lock Screen -->
+    <div id="lockScreen">
+        <div class="lock-title">Draw Pattern to Unlock</div>
+        <div class="pattern-container">
+            <canvas id="canvas" width="300" height="300"></canvas>
+            <div class="dot" data-row="0" data-col="0" style="left: 0px; top: 0px;"></div>
+            <div class="dot" data-row="0" data-col="1" style="left: 120px; top: 0px;"></div>
+            <div class="dot" data-row="0" data-col="2" style="left: 240px; top: 0px;"></div>
+            <div class="dot" data-row="1" data-col="0" style="left: 0px; top: 120px;"></div>
+            <div class="dot" data-row="1" data-col="1" style="left: 120px; top: 120px;"></div>
+            <div class="dot" data-row="1" data-col="2" style="left: 240px; top: 120px;"></div>
+            <div class="dot" data-row="2" data-col="0" style="left: 0px; top: 240px;"></div>
+            <div class="dot" data-row="2" data-col="1" style="left: 120px; top: 240px;"></div>
+            <div class="dot" data-row="2" data-col="2" style="left: 240px; top: 240px;"></div>
+        </div>
+        <div class="error-msg" id="errorMsg">Wrong pattern! Try again.</div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent">
+        <div class="container">
+            <h1>Files</h1>
+            <div class="file-list" id="fileList">
+                <div class="loading">Loading...</div>
+            </div>
         </div>
     </div>
 
     <script>
+        // Pattern Lock Logic
+        const CORRECT_PATTERN = '00-10-20-21-22'; // L shape: top-left, middle-left, bottom-left, bottom-middle, bottom-right
+        let pattern = [];
+        let isDrawing = false;
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const dots = document.querySelectorAll('.dot');
+        const errorMsg = document.getElementById('errorMsg');
+
+        // Check if already unlocked
+        if (sessionStorage.getItem('unlocked') === 'true') {
+            unlock();
+        }
+
+        dots.forEach(dot => {
+            dot.addEventListener('mousedown', startPattern);
+            dot.addEventListener('touchstart', startPattern);
+            dot.addEventListener('mouseenter', addToPattern);
+            dot.addEventListener('touchmove', handleTouchMove);
+        });
+
+        document.addEventListener('mouseup', endPattern);
+        document.addEventListener('touchend', endPattern);
+
+        function startPattern(e) {
+            e.preventDefault();
+            isDrawing = true;
+            pattern = [];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            dots.forEach(d => d.classList.remove('active'));
+            addDotToPattern(e.currentTarget);
+        }
+
+        function addToPattern(e) {
+            if (!isDrawing) return;
+            addDotToPattern(e.currentTarget);
+        }
+
+        function handleTouchMove(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (element && element.classList.contains('dot')) {
+                addDotToPattern(element);
+            }
+        }
+
+        function addDotToPattern(dot) {
+            const key = `${dot.dataset.row}${dot.dataset.col}`;
+            if (!pattern.includes(key)) {
+                pattern.push(key);
+                dot.classList.add('active');
+
+                if (pattern.length > 1) {
+                    drawLine();
+                }
+            }
+        }
+
+        function drawLine() {
+            const lastTwo = pattern.slice(-2);
+            const dot1 = document.querySelector(`[data-row="${lastTwo[0][0]}"][data-col="${lastTwo[0][1]}"]`);
+            const dot2 = document.querySelector(`[data-row="${lastTwo[1][0]}"][data-col="${lastTwo[1][1]}"]`);
+
+            const x1 = parseInt(dot1.style.left) + 30;
+            const y1 = parseInt(dot1.style.top) + 30;
+            const x2 = parseInt(dot2.style.left) + 30;
+            const y2 = parseInt(dot2.style.top) + 30;
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        function endPattern() {
+            if (!isDrawing) return;
+            isDrawing = false;
+
+            const userPattern = pattern.join('-');
+
+            if (userPattern === CORRECT_PATTERN) {
+                sessionStorage.setItem('unlocked', 'true');
+                unlock();
+            } else {
+                errorMsg.classList.add('show');
+                setTimeout(() => {
+                    errorMsg.classList.remove('show');
+                    pattern = [];
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    dots.forEach(d => d.classList.remove('active'));
+                }, 1500);
+            }
+        }
+
+        function unlock() {
+            document.getElementById('lockScreen').style.display = 'none';
+            document.getElementById('mainContent').classList.add('unlocked');
+            document.body.classList.add('unlocked');
+            loadFiles();
+        }
+
+        // File Loading Logic
         const REPO_OWNER = 'simsekdogukan';
         const REPO_NAME = 'mayatech-licanse';
 
@@ -166,8 +374,6 @@
                 document.getElementById('fileList').innerHTML = '<div class="empty">Failed to load</div>';
             }
         }
-
-        loadFiles();
     </script>
 </body>
 
