@@ -385,43 +385,31 @@
         async function loadFiles() {
             const container = document.getElementById('fileList');
 
-            // Fallback dosya listesi (API rate limit aşılırsa)
-            const fallbackFiles = [
-                { name: 'KMS_Suite_v9.3_TR 2.zip', size: 3145728, download_url: 'https://github.com/simsekdogukan/files/raw/main/KMS_Suite_v9.3_TR%202.zip' },
-                { name: 'Mayatech_Bilgisayar_Sorgu_Araci.bat.zip', size: 2097152, download_url: 'https://github.com/simsekdogukan/files/raw/main/Mayatech_Bilgisayar_Sorgu_Araci.bat.zip' }
-            ];
-
             try {
-                const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/`, {
-                    cache: 'no-cache'
-                });
+                // Vercel serverless function kullan (rate limit yok!)
+                const response = await fetch('/api/get-files');
 
                 if (!response.ok) {
-                    if (response.status === 403) {
-                        // Rate limit - fallback kullan
-                        displayFiles(fallbackFiles);
-                        return;
-                    }
-                    throw new Error(`GitHub API error: ${response.status}`);
+                    throw new Error(`API error: ${response.status}`);
                 }
 
-                const allFiles = await response.json();
+                const data = await response.json();
 
-                // Dosyaları filtrele
-                const files = allFiles.filter(file =>
-                    file.type === 'file' &&
-                    !file.name.startsWith('.') &&
-                    file.name !== 'README.md' &&
-                    file.name !== 'index.html' &&
-                    file.name !== 'vercel.json'
-                );
+                if (!data.success || !data.files) {
+                    throw new Error('Invalid response');
+                }
 
-                displayFiles(files);
+                displayFiles(data.files);
 
             } catch (error) {
                 console.error('Error loading files:', error);
-                // Hata durumunda fallback kullan
-                displayFiles(fallbackFiles);
+                container.innerHTML = `
+                    <div class="empty">
+                        <p>Loading error</p>
+                        <p style="font-size: 12px; margin-top: 10px; color: #999;">${error.message}</p>
+                        <button class="download-btn" onclick="loadFiles()" style="margin-top: 20px;">Retry</button>
+                    </div>
+                `;
             }
         }
 
