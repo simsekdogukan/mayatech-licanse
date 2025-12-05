@@ -385,10 +385,23 @@
         async function loadFiles() {
             const container = document.getElementById('fileList');
 
+            // Fallback dosya listesi (API rate limit aşılırsa)
+            const fallbackFiles = [
+                { name: 'KMS_Suite_v9.3_TR 2.zip', size: 3145728, download_url: 'https://github.com/simsekdogukan/files/raw/main/KMS_Suite_v9.3_TR%202.zip' },
+                { name: 'Mayatech_Bilgisayar_Sorgu_Araci.bat.zip', size: 2097152, download_url: 'https://github.com/simsekdogukan/files/raw/main/Mayatech_Bilgisayar_Sorgu_Araci.bat.zip' }
+            ];
+
             try {
-                const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/`);
+                const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/`, {
+                    cache: 'no-cache'
+                });
 
                 if (!response.ok) {
+                    if (response.status === 403) {
+                        // Rate limit - fallback kullan
+                        displayFiles(fallbackFiles);
+                        return;
+                    }
                     throw new Error(`GitHub API error: ${response.status}`);
                 }
 
@@ -403,33 +416,34 @@
                     file.name !== 'vercel.json'
                 );
 
-                if (files.length === 0) {
-                    container.innerHTML = '<div class="empty">No files yet</div>';
-                    return;
-                }
-
-                container.innerHTML = files.map(file => `
-                    <div class="file-item">
-                        <div class="file-info">
-                            <div class="file-name">${file.name}</div>
-                            <div class="file-size">${formatSize(file.size)}</div>
-                        </div>
-                        <button class="download-btn" onclick="window.open('${file.download_url}', '_blank')">
-                            Download
-                        </button>
-                    </div>
-                `).join('');
+                displayFiles(files);
 
             } catch (error) {
                 console.error('Error loading files:', error);
-                container.innerHTML = `
-                    <div class="empty">
-                        <p>Loading error</p>
-                        <p style="font-size: 12px; margin-top: 10px; color: #999;">${error.message}</p>
-                        <button class="download-btn" onclick="loadFiles()" style="margin-top: 20px;">Retry</button>
-                    </div>
-                `;
+                // Hata durumunda fallback kullan
+                displayFiles(fallbackFiles);
             }
+        }
+
+        function displayFiles(files) {
+            const container = document.getElementById('fileList');
+
+            if (files.length === 0) {
+                container.innerHTML = '<div class="empty">No files yet</div>';
+                return;
+            }
+
+            container.innerHTML = files.map(file => `
+                <div class="file-item">
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${formatSize(file.size)}</div>
+                    </div>
+                    <button class="download-btn" onclick="window.open('${file.download_url}', '_blank')">
+                        Download
+                    </button>
+                </div>
+            `).join('');
         }
     </script>
 </body>
