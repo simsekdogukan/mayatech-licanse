@@ -26,42 +26,49 @@
             justify-content: center;
             min-height: 100vh;
             width: 100%;
-            padding: 40px 20px;
         }
 
         .lock-title {
             color: #333;
-            font-size: 20px;
-            margin-bottom: 60px;
+            font-size: 24px;
+            margin-bottom: 80px;
             font-weight: 600;
         }
 
         .pattern-container {
             position: relative;
-            width: 280px;
-            height: 280px;
+            width: 340px;
+            height: 340px;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pattern-grid {
+            position: relative;
+            width: 240px;
+            height: 240px;
         }
 
         canvas {
             position: absolute;
-            top: 40px;
-            left: 40px;
+            top: 0;
+            left: 0;
             pointer-events: none;
         }
 
         .dot {
             position: absolute;
-            width: 50px;
-            height: 50px;
-            border: 3px solid #ddd;
+            width: 60px;
+            height: 60px;
+            border: 4px solid #e0e0e0;
             border-radius: 50%;
             background: white;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -69,11 +76,11 @@
 
         .dot::after {
             content: '';
-            width: 12px;
-            height: 12px;
-            background: #ddd;
+            width: 16px;
+            height: 16px;
+            background: #e0e0e0;
             border-radius: 50%;
-            transition: all 0.15s;
+            transition: all 0.2s;
         }
 
         .dot.active {
@@ -224,16 +231,18 @@
     <div id="lockScreen">
         <div class="lock-title">Draw Pattern</div>
         <div class="pattern-container">
-            <canvas id="canvas" width="200" height="200"></canvas>
-            <div class="dot" data-pos="0" style="left: 0px; top: 0px;"></div>
-            <div class="dot" data-pos="1" style="left: 75px; top: 0px;"></div>
-            <div class="dot" data-pos="2" style="left: 150px; top: 0px;"></div>
-            <div class="dot" data-pos="3" style="left: 0px; top: 75px;"></div>
-            <div class="dot" data-pos="4" style="left: 75px; top: 75px;"></div>
-            <div class="dot" data-pos="5" style="left: 150px; top: 75px;"></div>
-            <div class="dot" data-pos="6" style="left: 0px; top: 150px;"></div>
-            <div class="dot" data-pos="7" style="left: 75px; top: 150px;"></div>
-            <div class="dot" data-pos="8" style="left: 150px; top: 150px;"></div>
+            <div class="pattern-grid">
+                <canvas id="canvas" width="240" height="240"></canvas>
+                <div class="dot" data-pos="0" style="left: 0px; top: 0px;"></div>
+                <div class="dot" data-pos="1" style="left: 90px; top: 0px;"></div>
+                <div class="dot" data-pos="2" style="left: 180px; top: 0px;"></div>
+                <div class="dot" data-pos="3" style="left: 0px; top: 90px;"></div>
+                <div class="dot" data-pos="4" style="left: 90px; top: 90px;"></div>
+                <div class="dot" data-pos="5" style="left: 180px; top: 90px;"></div>
+                <div class="dot" data-pos="6" style="left: 0px; top: 180px;"></div>
+                <div class="dot" data-pos="7" style="left: 90px; top: 180px;"></div>
+                <div class="dot" data-pos="8" style="left: 180px; top: 180px;"></div>
+            </div>
         </div>
         <div class="error-msg" id="errorMsg">Wrong pattern</div>
     </div>
@@ -257,21 +266,16 @@
         const ctx = canvas.getContext('2d');
         const dots = document.querySelectorAll('.dot');
         const errorMsg = document.getElementById('errorMsg');
-        const patternContainer = document.querySelector('.pattern-container');
-
-        // Check if already unlocked
-        if (sessionStorage.getItem('unlocked') === 'true') {
-            unlock();
-        }
+        const patternGrid = document.querySelector('.pattern-grid');
 
         // Desktop events
-        patternContainer.addEventListener('mousedown', (e) => {
+        patternGrid.addEventListener('mousedown', (e) => {
             e.preventDefault();
             const dot = e.target.closest('.dot');
             if (dot) startPattern(dot);
         });
 
-        patternContainer.addEventListener('mousemove', (e) => {
+        patternGrid.addEventListener('mousemove', (e) => {
             if (!isDrawing) return;
             const dot = e.target.closest('.dot');
             if (dot) addDotToPattern(dot);
@@ -280,7 +284,7 @@
         document.addEventListener('mouseup', endPattern);
 
         // Mobile events
-        patternContainer.addEventListener('touchstart', (e) => {
+        patternGrid.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
             const dot = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -289,7 +293,7 @@
             }
         }, { passive: false });
 
-        patternContainer.addEventListener('touchmove', (e) => {
+        patternGrid.addEventListener('touchmove', (e) => {
             if (!isDrawing) return;
             e.preventDefault();
             const touch = e.touches[0];
@@ -327,10 +331,10 @@
             const dot1 = document.querySelector(`[data-pos="${lastTwo[0]}"]`);
             const dot2 = document.querySelector(`[data-pos="${lastTwo[1]}"]`);
 
-            const x1 = parseInt(dot1.style.left) + 25;
-            const y1 = parseInt(dot1.style.top) + 25;
-            const x2 = parseInt(dot2.style.left) + 25;
-            const y2 = parseInt(dot2.style.top) + 25;
+            const x1 = parseInt(dot1.style.left) + 30;
+            const y1 = parseInt(dot1.style.top) + 30;
+            const x2 = parseInt(dot2.style.left) + 30;
+            const y2 = parseInt(dot2.style.top) + 30;
 
             ctx.strokeStyle = '#007aff';
             ctx.lineWidth = 3;
@@ -348,7 +352,6 @@
             const userPattern = pattern.join('-');
 
             if (userPattern === CORRECT_PATTERN) {
-                sessionStorage.setItem('unlocked', 'true');
                 unlock();
             } else if (pattern.length > 0) {
                 errorMsg.classList.add('show');
